@@ -1,23 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { FaClipboardList, FaMapMarkerAlt, FaCalendarAlt, FaMoneyBillWave } from 'react-icons/fa';
 import api from '../services/api';
+
+const STATUS_BADGES = {
+  en_attente: { class: 'badge-yellow', label: 'En attente' },
+  confirmee: { class: 'badge-green', label: 'Confirmée' },
+  en_cours: { class: 'badge-blue', label: 'En cours' },
+  terminee: { class: 'badge-green', label: 'Terminée' },
+  annulee: { class: 'badge-red', label: 'Annulée' },
+};
 
 const Reservations = () => {
   const { user } = useAuth();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchReservations();
-  }, []);
+  useEffect(() => { fetchReservations(); }, []);
 
   const fetchReservations = async () => {
     try {
-      const endpoint = user.role === 'client' 
-        ? '/reservations' 
-        : '/reservations/nettoyeur';
+      if (!user) return;
+      const endpoint = user.type === 'client' ? '/reservations' : '/reservations/nettoyeur';
       const response = await api.get(endpoint);
-      setReservations(response.data);
+      setReservations(response.data.data || response.data);
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
@@ -28,7 +34,7 @@ const Reservations = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Chargement...</div>
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -36,62 +42,61 @@ const Reservations = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-8">📋 Mes Réservations</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Mes réservations</h1>
 
         {reservations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600 text-lg">Aucune réservation pour le moment</p>
+          <div className="card text-center py-16">
+            <FaClipboardList className="text-5xl text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg">Aucune réservation pour le moment</p>
+            <p className="text-gray-400 text-sm mt-1">Vos réservations apparaîtront ici</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {reservations.map((reservation) => (
-              <div key={reservation.id} className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-2">
-                      {reservation.candidature?.titre || 'Réservation'}
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      {reservation.candidature?.description}
-                    </p>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600">📍 Adresse:</p>
-                        <p className="font-semibold">{reservation.candidature?.adresse}</p>
+          <div className="space-y-3">
+            {reservations.map((r) => {
+              const status = STATUS_BADGES[r.statut] || STATUS_BADGES.en_attente;
+              return (
+                <div key={r.id} className="card !p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {r.type_service && <span className="badge badge-blue capitalize">{r.type_service}</span>}
+                        <h3 className="font-semibold text-gray-900">
+                          {r.titre || r.candidature?.titre || 'Réservation'}
+                        </h3>
                       </div>
-                      <div>
-                        <p className="text-gray-600">📅 Date:</p>
-                        <p className="font-semibold">
-                          {new Date(reservation.dateReservation).toLocaleDateString('fr-FR', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                      {(r.description || r.candidature?.description) && (
+                        <p className="text-gray-500 text-sm mb-3 line-clamp-2">
+                          {r.description || r.candidature?.description}
                         </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">💰 Budget:</p>
-                        <p className="font-semibold text-blue-600">
-                          {reservation.candidature?.budget}€
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">📊 Statut:</p>
-                        <span className={`inline-block px-3 py-1 rounded text-sm font-semibold ${
-                          reservation.statut === 'confirmee' ? 'bg-green-100 text-green-800' :
-                          reservation.statut === 'en_attente' ? 'bg-yellow-100 text-yellow-800' :
-                          reservation.statut === 'terminee' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {reservation.statut}
-                        </span>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                        {(r.adresse_service || r.candidature?.adresse) && (
+                          <span className="flex items-center gap-1">
+                            <FaMapMarkerAlt className="text-gray-400" />
+                            {r.adresse_service || r.candidature?.adresse}
+                          </span>
+                        )}
+                        {(r.date_service || r.dateReservation) && (
+                          <span className="flex items-center gap-1">
+                            <FaCalendarAlt className="text-gray-400" />
+                            {new Date(r.date_service || r.dateReservation).toLocaleDateString('fr-FR', {
+                              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                            })}
+                          </span>
+                        )}
+                        {(r.prix_propose || r.candidature?.budget) && (
+                          <span className="flex items-center gap-1 font-semibold text-gray-700">
+                            <FaMoneyBillWave className="text-gray-400" />
+                            {r.prix_propose || r.candidature?.budget} DT
+                          </span>
+                        )}
                       </div>
                     </div>
+                    <span className={`badge ${status.class}`}>{status.label}</span>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

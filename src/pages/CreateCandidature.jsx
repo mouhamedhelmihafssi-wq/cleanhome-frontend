@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaHome, FaCalendarAlt, FaMoneyBillWave, FaFileAlt, FaBroom, FaCar, FaBuilding, FaTree } from 'react-icons/fa';
@@ -15,6 +15,9 @@ const CLEANING_TYPES = [
 ];
 
 const CreateCandidature = () => {
+  const [searchParams] = useSearchParams();
+  const typeFromUrl = searchParams.get('type') || '';
+
   const [formData, setFormData] = useState({
     titre: '',
     description: '',
@@ -24,7 +27,7 @@ const CreateCandidature = () => {
     dateDisponibilite: '',
     heure_debut: '',
     budget: '',
-    type_service: '',
+    type_service: typeFromUrl,
   });
 
   const [details, setDetails] = useState({});
